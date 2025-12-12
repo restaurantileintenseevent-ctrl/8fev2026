@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Déjeuner Dansant - 8 Fév 2026</title>
+    
+    <!-- Tailwind CSS (Pour le design) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons (Pour les icônes) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Styles spécifiques pour l'impression -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap');
+
+        body {
+            font-family: 'ui-sans-serif', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+
+        /* Animation utilitaire */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media print {
+            @page { margin: 0; }
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-hidden { display: none !important; }
+            .print-shadow-none { box-shadow: none !important; }
+            #flyer-canvas { 
+                margin: 0 auto; 
+                top: 20px;
+                box-shadow: none;
+                border: 1px solid #ddd;
+                break-inside: avoid;
+            }
+        }
+        
+        /* Scrollbar personnalisée pour la liste */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-gray-50 flex items-center justify-center z-50">
+        <div class="flex flex-col items-center text-gray-500 text-lg">
+            <div class="flex items-center mb-4">
+                <i data-lucide="loader-2" class="w-8 h-8 animate-spin mr-2"></i>
+                Démarrage...
+            </div>
+            <p class="text-xs text-gray-400 max-w-xs text-center">
+                Initialisation en cours...
+            </p>
+        </div>
+    </div>
+
+    <!-- App Content (Hidden until auth or fallback) -->
+    <div id="app-content" class="hidden">
+        
+        <!-- Header -->
+        <header id="app-header" class="bg-indigo-600 text-white p-4 shadow-md print-hidden transition-colors duration-300">
+            <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center gap-2 mb-4 md:mb-0">
+                    <i data-lucide="ticket" class="w-6 h-6"></i>
+                    <h1 class="text-xl font-bold">Déjeuner Dansant - 8 Fév 2026</h1>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="status-dot" class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    <div id="status-text" class="text-sm bg-indigo-700 px-3 py-1 rounded-full">
+                        En ligne (Firebase)
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-4xl mx-auto p-4 md:p-8">
+
+            <!-- CONFIGURATION SECTION (Form) -->
+            <div id="config-section" class="max-w-xl mx-auto mb-8 print-hidden transition-all duration-300">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-5 h-5 text-indigo-500"></i>
+                        Nouveau Billet
+                    </h2>
+
+                    <!-- Champ Nom -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom du Participant (Obligatoire)
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i data-lucide="user" class="h-5 w-5 text-gray-400"></i>
+                            </div>
+                            <input
+                                type="text"
+                                id="participant-name"
+                                placeholder="Ex: Jean Dupont"
+                                class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Champ Vendeur (Nouveau) -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom du Vendeur (Obligatoire)
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i data-lucide="briefcase" class="h-5 w-5 text-gray-400"></i>
+                            </div>
+                            <input
+                                type="text"
+                                id="seller-name"
+                                placeholder="Ex: Votre Prénom"
+                                class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Boutons Actions -->
+                    <div class="space-y-4">
+                        <button id="btn-adulte" disabled class="w-full py-4 font-bold rounded-lg transition-colors flex items-center justify-center gap-3 shadow-sm bg-gray-100 text-gray-400 cursor-not-allowed">
+                            <span id="icon-adulte"><i data-lucide="users"></i></span>
+                            <span id="loading-adulte" class="hidden"><i data-lucide="loader-2" class="animate-spin"></i></span>
+                            Générer ADULTE
+                            <span id="badge-adulte" class="px-2 py-0.5 rounded text-sm ml-auto bg-gray-200">
+                                Prochain N°: ...
+                            </span>
+                        </button>
+
+                        <button id="btn-enfant" disabled class="w-full py-4 font-bold rounded-lg transition-colors flex items-center justify-center gap-3 shadow-sm bg-gray-100 text-gray-400 cursor-not-allowed">
+                            <span id="icon-enfant"><i data-lucide="baby"></i></span>
+                            <span id="loading-enfant" class="hidden"><i data-lucide="loader-2" class="animate-spin"></i></span>
+                            Générer ENFANT
+                            <span id="badge-enfant" class="px-2 py-0.5 rounded text-sm ml-auto bg-gray-200">
+                                Prochain N°: ...
+                            </span>
+                        </button>
+                    </div>
+                    
+                    <p id="error-msg" class="text-xs text-red-500 mt-2 text-center">
+                        Remplissez le nom du participant et du vendeur.
+                    </p>
+                </div>
+
+                <!-- SECTION LISTE DES BILLETS -->
+                <div class="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 class="font-semibold text-gray-700 flex items-center gap-2">
+                            <i data-lucide="list" class="w-4 h-4"></i>
+                            Liste des Billets
+                        </h3>
+                        <span id="total-tickets-count" class="text-xs bg-gray-200 px-2 py-1 rounded-full text-gray-600">0 billets</span>
+                    </div>
+                    
+                    <div class="max-h-64 overflow-y-auto custom-scrollbar">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 uppercase bg-gray-50 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-3">N°</th>
+                                    <th class="px-4 py-3">Nom</th>
+                                    <th class="px-4 py-3">Vendeur</th>
+                                    <th class="px-4 py-3">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tickets-list-body" class="divide-y divide-gray-100">
+                                <!-- Les tickets seront injectés ici -->
+                                <tr class="text-center text-gray-400">
+                                    <td colspan="3" class="py-4">Aucun billet généré pour le moment</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FLYER DISPLAY SECTION (Result) -->
+            <div id="flyer-view" class="hidden flex-col items-center fade-in">
+                
+                <!-- Action Bar -->
+                <div class="mb-6 flex flex-wrap gap-3 justify-center print-hidden bg-white p-2 rounded-xl shadow-sm border border-gray-200">
+                    
+                    <a id="btn-mail" href="#" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2 text-sm no-underline">
+                        <i data-lucide="mail" class="w-4 h-4"></i> Email
+                    </a>
+
+                    <button id="btn-sms" class="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition flex items-center gap-2 text-sm">
+                        <i data-lucide="message-square" class="w-4 h-4"></i> SMS
+                    </button>
+
+                    <button id="btn-share" class="hidden bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition flex items-center gap-2 text-sm">
+                        <i data-lucide="share-2" class="w-4 h-4"></i> Partager
+                    </button>
+
+                    <div class="w-px bg-gray-300 mx-1"></div>
+
+                    <button id="btn-close" class="text-gray-500 hover:text-red-500 px-4 py-2 font-medium transition text-sm">
+                        Fermer
+                    </button>
+                </div>
+
+                <!-- CANVAS (The Flyer) -->
+                <!-- Note: Background images are set via JS with fallback URLs -->
+                <div id="flyer-canvas" class="relative shadow-2xl print-shadow-none overflow-hidden bg-gray-200" 
+                     style="width: 350px; height: 622px; background-size: cover; background-position: center;">
+                    
+                    <!-- Fallback Text (Hidden if image loads) -->
+                    <div id="flyer-fallback-text" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
+                        <h2 id="flyer-type-text" class="text-4xl font-serif tracking-widest text-black uppercase opacity-20"></h2>
+                    </div>
+                    
+                    <!-- Overlay pour lisibilité si image manquante -->
+                    <div class="absolute inset-0 bg-black/10 pointer-events-none"></div>
+
+                    <!-- Ticket Stub (Bottom Right) -->
+                    <div class="absolute bottom-6 right-6 bg-white/95 backdrop-blur-sm rounded-lg border-2 border-black/10 shadow-sm print-shadow-none flex overflow-hidden max-w-[260px]">
+                        
+                        <!-- Partie 1 (Talon) -->
+                        <div class="px-2 py-2 flex flex-col items-center justify-center border-r-2 border-dashed border-gray-500 min-w-[80px] max-w-[120px]">
+                            <div class="flyer-name-display text-[10px] text-gray-900 font-bold leading-tight text-center mb-1 line-clamp-2 w-full break-words"></div>
+                            <div class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">N°</div>
+                            <div class="flyer-number-display text-xl font-mono font-bold text-gray-900 leading-none"></div>
+                        </div>
+
+                        <!-- Partie 2 (Ticket) -->
+                        <div class="px-2 py-2 flex flex-col items-center justify-center min-w-[80px] max-w-[120px]">
+                            <div class="flyer-name-display text-[10px] text-gray-900 font-bold leading-tight text-center mb-1 line-clamp-2 w-full break-words"></div>
+                            <div class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">N°</div>
+                            <div class="flyer-number-display text-xl font-mono font-bold text-gray-900 leading-none"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <p class="mt-4 text-sm text-gray-400 print-hidden text-center max-w-sm">
+                    Conseil : Prends une capture d'écran du flyer pour l'envoyer par WhatsApp si le bouton Partager ne fonctionne pas.
+                </p>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Firebase SDKs Updated -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, onSnapshot, runTransaction, collection, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // =================================================================
+        // ZONE DE CONFIGURATION FIREBASE (ADAPTÉE POUR ENVIRONNEMENT)
+        // =================================================================
+        
+        // 1. Récupération de la config (Variable d'env ou Hardcodée en fallback)
+        let firebaseConfig;
+        let appId = 'default-app-id';
+
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            if (typeof __app_id !== 'undefined') appId = __app_id;
+        } else {
+             // Config originale de l'utilisateur (Fallback)
+            firebaseConfig = {
+                apiKey: "AIzaSyAiSxcRy4Xx15Sv29RpXK_Lit4SmxIJFvY",
+                authDomain: "flyer8fev2026.firebaseapp.com",
+                projectId: "flyer8fev2026",
+                storageBucket: "flyer8fev2026.firebasestorage.app",
+                messagingSenderId: "739708806578",
+                appId: "1:739708806578:web:838c0a91d4f02792dff0ab",
+                measurementId: "G-936B00XV9T"
+            };
+        }
+        
+        // =================================================================
+
+        const COLLECTION_NAME = 'Flyer8fev2026';
+
+        // State
+        let app, auth, db;
+        let currentUser = null;
+        let counters = { adulte: 0, enfant: 0, total: 0 };
+        let ticketsList = [];
+        let currentFlyer = null;
+        let isGenerating = false;
+        let useLocalStorage = false; // Flag pour mode secours
+
+        // DOM Elements
+        const els = {
+            loadingScreen: document.getElementById('loading-screen'),
+            appContent: document.getElementById('app-content'),
+            appHeader: document.getElementById('app-header'),
+            statusDot: document.getElementById('status-dot'),
+            statusText: document.getElementById('status-text'),
+            
+            inputName: document.getElementById('participant-name'),
+            inputSeller: document.getElementById('seller-name'),
+            btnAdulte: document.getElementById('btn-adulte'),
+            btnEnfant: document.getElementById('btn-enfant'),
+            badgeAdulte: document.getElementById('badge-adulte'),
+            badgeEnfant: document.getElementById('badge-enfant'),
+            errorMsg: document.getElementById('error-msg'),
+            
+            iconAdulte: document.getElementById('icon-adulte'),
+            loadingAdulte: document.getElementById('loading-adulte'),
+            iconEnfant: document.getElementById('icon-enfant'),
+            loadingEnfant: document.getElementById('loading-enfant'),
+
+            configSection: document.getElementById('config-section'),
+            flyerView: document.getElementById('flyer-view'),
+            flyerCanvas: document.getElementById('flyer-canvas'),
+            flyerFallbackText: document.getElementById('flyer-fallback-text'),
+            flyerTypeText: document.getElementById('flyer-type-text'),
+            nameDisplays: document.querySelectorAll('.flyer-name-display'),
+            numberDisplays: document.querySelectorAll('.flyer-number-display'),
+
+            ticketsListBody: document.getElementById('tickets-list-body'),
+            totalTicketsCount: document.getElementById('total-tickets-count'),
+
+            btnClose: document.getElementById('btn-close'),
+            btnMail: document.getElementById('btn-mail'),
+            btnSms: document.getElementById('btn-sms'),
+            btnShare: document.getElementById('btn-share'),
+        };
+
+        // --- Fonctions Mode Secours (Local) ---
+        function enableOfflineMode(reason) {
+            console.warn("Passage en mode Local (Hors Ligne/Erreur Config) :", reason);
+            useLocalStorage = true;
+            
+            // Mise à jour UI
+            els.appHeader.classList.remove('bg-indigo-600');
+            els.appHeader.classList.add('bg-gray-700');
+            els.statusDot.classList.remove('bg-green-400');
+            els.statusDot.classList.add('bg-orange-400');
+            els.statusText.textContent = "Mode Local (Non synchronisé)";
+            els.statusText.classList.remove('bg-indigo-700');
+            els.statusText.classList.add('bg-gray-600');
+            
+            // Masquer chargement
+            els.loadingScreen.classList.add('hidden');
+            els.appContent.classList.remove('hidden');
+
+            // Charger les données locales
+            const storedCounters = localStorage.getItem('flyer_counters');
+            if (storedCounters) {
+                try {
+                    counters = JSON.parse(storedCounters);
+                } catch(e) {}
+            }
+            
+            // Charger la liste locale
+            const storedTickets = localStorage.getItem('flyer_tickets_list');
+            if (storedTickets) {
+                try {
+                    ticketsList = JSON.parse(storedTickets);
+                } catch(e) {}
+            }
+
+            updateUI();
+            renderTicketsList();
+        }
+
+        // --- Init Firebase ---
+        const initAuth = async () => {
+            // Charger le dernier vendeur connu pour faciliter la saisie
+            const lastSeller = localStorage.getItem('last_seller_name');
+            if (lastSeller && els.inputSeller) {
+                els.inputSeller.value = lastSeller;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Pattern d'auth obligatoire pour cet environnement
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        els.loadingScreen.classList.add('hidden');
+                        els.appContent.classList.remove('hidden');
+                        initFirestoreListener();
+                        initTicketsListener();
+                    } else {
+                        // Perte d'auth
+                        enableOfflineMode("Utilisateur non connecté");
+                    }
+                });
+            } catch (error) {
+                console.error("Erreur Init:", error);
+                // Si l'auth échoue, on passe en mode local pour que l'app reste testable
+                enableOfflineMode(error.message || "Erreur SDK");
+            }
+        };
+
+        initAuth();
+
+        // --- Helpers Path Firestore ---
+        // Adapte le chemin selon si on est en environnement public ou privé
+        function getCollectionPath() {
+             return collection(db, 'artifacts', appId, 'public', 'data', COLLECTION_NAME);
+        }
+        function getCountersPath() {
+             // On stocke les compteurs dans un sous-doc 'counters/global' de la collection
+             // Note: La structure doit être légèrement adaptée pour correspondre aux règles de sécurité
+             return doc(db, 'artifacts', appId, 'public', 'data', COLLECTION_NAME + '_counters', 'global');
+        }
+
+
+        // --- Firestore Logic ---
+        function initFirestoreListener() {
+            if (useLocalStorage) return;
+
+            const docRef = getCountersPath();
+            
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    counters = docSnap.data();
+                    updateUI();
+                } else {
+                    // Initialisation si n'existe pas
+                    setDoc(docRef, { adulte: 0, enfant: 0, total: 0 }).catch(e => {
+                        console.log("Info: Le doc n'existe pas encore ou permission refusée", e);
+                        // Ne pas bloquer l'UI si on ne peut pas écrire tout de suite
+                    });
+                }
+            }, (error) => {
+                console.error("Erreur Sync Firestore (Compteurs):", error);
+                // Ne pas passer en mode hors ligne immédiatement pour une erreur de lecture seule, 
+                // mais avertir si nécessaire.
+            });
+        }
+
+        // Listener Liste
+        function initTicketsListener() {
+            if (useLocalStorage) return;
+
+            const ticketsRef = getCollectionPath();
+            // Note: 'orderBy' simple est autorisé
+            const q = query(ticketsRef, orderBy('number', 'desc'));
+
+            onSnapshot(q, (snapshot) => {
+                ticketsList = [];
+                snapshot.forEach((doc) => {
+                    ticketsList.push(doc.data());
+                });
+                renderTicketsList();
+            }, (error) => {
+                console.error("Erreur Sync Liste:", error);
+            });
+        }
+
+        async function generateNumber(type) {
+            const name = els.inputName.value.trim();
+            const seller = els.inputSeller.value.trim();
+            
+            if (!name || !seller) return;
+
+            // Sauvegarder le vendeur pour la prochaine fois
+            localStorage.setItem('last_seller_name', seller);
+
+            setGenerating(true, type);
+
+            // --- CAS 1 : Mode Local (Secours) ---
+            if (useLocalStorage) {
+                setTimeout(() => {
+                    counters.total = (counters.total || 0) + 1;
+                    counters[type] = (counters[type] || 0) + 1;
+                    
+                    const newTicket = {
+                        number: counters.total,
+                        name: name,
+                        seller: seller,
+                        type: type,
+                        date: new Date().toISOString()
+                    };
+                    
+                    // Mise à jour state local
+                    ticketsList.unshift(newTicket);
+                    
+                    // Sauvegarde Locale
+                    localStorage.setItem('flyer_counters', JSON.stringify(counters));
+                    localStorage.setItem('flyer_tickets_list', JSON.stringify(ticketsList));
+                    
+                    finishGeneration(newTicket);
+                }, 500);
+                return;
+            }
+
+            // --- CAS 2 : Mode Firebase (Connecté) ---
+            if (!currentUser) {
+                enableOfflineMode("Perte de connexion");
+                generateNumber(type); 
+                return;
+            }
+
+            const docRef = getCountersPath();
+
+            try {
+                const newTicketData = await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(docRef);
+                    let newTotal = 1;
+                    let newTypeCount = 1;
+
+                    if (sfDoc.exists()) {
+                        const data = sfDoc.data();
+                        const currentTotal = data.total || 0;
+                        const currentTypeCount = data[type] || 0;
+                        newTotal = currentTotal + 1;
+                        newTypeCount = currentTypeCount + 1;
+                    }
+
+                    // Mise à jour des compteurs
+                    transaction.set(docRef, { 
+                        total: newTotal,
+                        [type]: newTypeCount 
+                    }, { merge: true });
+
+                    return { number: newTotal, type, name, seller };
+                });
+                
+                // Sauvegarder le ticket dans la collection principale
+                const ticketRef = doc(getCollectionPath(), newTicketData.number.toString());
+                const finalTicket = {
+                    ...newTicketData,
+                    date: new Date().toISOString()
+                };
+                
+                await setDoc(ticketRef, finalTicket);
+
+                finishGeneration(finalTicket);
+
+            } catch (e) {
+                console.error("Erreur Transaction:", e);
+                
+                let friendlyMsg = "Erreur de connexion lors de la sauvegarde.";
+                if (e.code === 'permission-denied') friendlyMsg = "Permission refusée par Firebase.";
+                
+                // Remplacement de l'alert() bloquant par un log et fallback
+                console.warn(`${friendlyMsg} Le billet sera généré en mode local.`);
+                
+                enableOfflineMode("Erreur transaction: " + e.code);
+                generateNumber(type);
+            }
+        }
+
+        function finishGeneration(ticket) {
+            showFlyer(ticket);
+            els.inputName.value = '';
+            validateInput();
+            setGenerating(false, ticket.type);
+        }
+
+        // --- UI Logic ---
+
+        function renderTicketsList() {
+            els.totalTicketsCount.textContent = `${ticketsList.length} billets`;
+            
+            if (ticketsList.length === 0) {
+                els.ticketsListBody.innerHTML = `
+                    <tr class="text-center text-gray-400">
+                        <td colspan="3" class="py-4">Aucun billet généré</td>
+                    </tr>`;
+                return;
+            }
+
+            els.ticketsListBody.innerHTML = ticketsList.map(ticket => `
+                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                    <td class="px-4 py-3 font-mono font-bold text-gray-700">#${ticket.number.toString().padStart(3, '0')}</td>
+                    <td class="px-4 py-3 font-medium text-gray-900">${ticket.name}</td>
+                    <td class="px-4 py-3 text-gray-500 text-xs">${ticket.seller || '-'}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                            ticket.type === 'adulte' ? 'bg-yellow-100 text-yellow-800' : 'bg-sky-100 text-sky-800'
+                        }">
+                            ${ticket.type === 'adulte' ? 'ADULTE' : 'ENFANT'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateUI() {
+            const nextNum = (counters.total || 0) + 1;
+            els.badgeAdulte.textContent = `Prochain N°: ${nextNum}`;
+            els.badgeEnfant.textContent = `Prochain N°: ${nextNum}`;
+            validateInput();
+        }
+
+        function validateInput() {
+            const hasName = els.inputName.value.trim().length > 0;
+            const hasSeller = els.inputSeller.value.trim().length > 0;
+            const isValid = hasName && hasSeller;
+            
+            const btnClassBase = "w-full py-4 font-bold rounded-lg transition-colors flex items-center justify-center gap-3 shadow-sm";
+            const btnClassDisabled = "bg-gray-100 text-gray-400 cursor-not-allowed";
+            const btnClassAdulte = "bg-yellow-400 hover:bg-yellow-500 text-yellow-900";
+            const btnClassEnfant = "bg-sky-400 hover:bg-sky-500 text-white";
+
+            // Adulte Button
+            els.btnAdulte.disabled = !isValid || isGenerating;
+            els.btnAdulte.className = `${btnClassBase} ${(!isValid || isGenerating) ? btnClassDisabled : btnClassAdulte}`;
+            els.badgeAdulte.className = `px-2 py-0.5 rounded text-sm ml-auto ${(!isValid || isGenerating) ? 'bg-gray-200' : 'bg-white/50'}`;
+
+            // Enfant Button
+            els.btnEnfant.disabled = !isValid || isGenerating;
+            els.btnEnfant.className = `${btnClassBase} ${(!isValid || isGenerating) ? btnClassDisabled : btnClassEnfant}`;
+            els.badgeEnfant.className = `px-2 py-0.5 rounded text-sm ml-auto ${(!isValid || isGenerating) ? 'bg-gray-200' : 'bg-white/20'}`;
+
+            if (!isValid) els.errorMsg.classList.remove('hidden');
+            else els.errorMsg.classList.add('hidden');
+        }
+
+        function setGenerating(state, type) {
+            isGenerating = state;
+            if (state) {
+                if (type === 'adulte') {
+                    els.iconAdulte.classList.add('hidden');
+                    els.loadingAdulte.classList.remove('hidden');
+                } else {
+                    els.iconEnfant.classList.add('hidden');
+                    els.loadingEnfant.classList.remove('hidden');
+                }
+            } else {
+                els.iconAdulte.classList.remove('hidden');
+                els.loadingAdulte.classList.add('hidden');
+                els.iconEnfant.classList.remove('hidden');
+                els.loadingEnfant.classList.add('hidden');
+            }
+            validateInput();
+        }
+
+        function showFlyer(flyerData) {
+            currentFlyer = flyerData;
+            
+            els.nameDisplays.forEach(el => el.textContent = flyerData.name);
+            const numStr = flyerData.number.toString().padStart(3, '0');
+            els.numberDisplays.forEach(el => el.textContent = numStr);
+            els.flyerTypeText.textContent = flyerData.type;
+
+            // Modification demandée : utilisation des noms de fichiers locaux
+            const bgImage = flyerData.type === 'adulte' ? 'adulte.jpg' : 'enfant.jpg';
+            els.flyerCanvas.style.backgroundImage = `url('${bgImage}')`;
+            
+            updateShareLinks();
+            els.configSection.classList.add('hidden');
+            els.flyerView.classList.remove('hidden');
+        }
+
+        function closeFlyer() {
+            currentFlyer = null;
+            els.flyerView.classList.add('hidden');
+            els.configSection.classList.remove('hidden');
+        }
+
+        function updateShareLinks() {
+            if (!currentFlyer) return;
+            const num = currentFlyer.number.toString().padStart(3, '0');
+            const text = `Déjeuner Dansant du 8 Février 2026.\nInvité : ${currentFlyer.name}\nTicket ${currentFlyer.type.toUpperCase()} N° ${num}.\nPrésente ce message à l'entrée.`;
+            els.btnMail.href = `mailto:?subject=${encodeURIComponent("Ton Ticket pour le Déjeuner Dansant")}&body=${encodeURIComponent(text)}`;
+            els.btnSms.onclick = () => window.location.href = `sms:?&body=${encodeURIComponent(text)}`;
+            if (navigator.share) {
+                els.btnShare.classList.remove('hidden');
+                els.btnShare.onclick = async () => {
+                    try {
+                        await navigator.share({ title: 'Déjeuner Dansant 2026', text: text });
+                    } catch(err) {}
+                };
+            }
+        }
+
+        els.inputName.addEventListener('input', validateInput);
+        els.inputSeller.addEventListener('input', validateInput);
+        els.btnAdulte.addEventListener('click', () => generateNumber('adulte'));
+        els.btnEnfant.addEventListener('click', () => generateNumber('enfant'));
+        els.btnClose.addEventListener('click', closeFlyer);
+
+        lucide.createIcons();
+
+    </script>
+</body>
+</html>
