@@ -690,56 +690,70 @@
 
         async function generateTicketBlob() {
             // Utilise html2canvas pour convertir la div en image
+            // On force le scale à 2 pour une bonne qualité sur mobile
             const canvas = await html2canvas(els.flyerCanvas, {
-                useCORS: true, // Important si les images sont externes (même si ici locales, ça ne mange pas de pain)
-                scale: 2 // Meilleure qualité
+                useCORS: true,
+                scale: 2,
+                backgroundColor: null // Important pour la transparence/qualité
             });
-            return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            // On utilise PNG qui est mieux supporté par le partage Android que JPEG
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         }
 
         async function handleShare() {
             if (!currentFlyer) return;
 
             els.shareLoading.classList.remove('hidden');
+            els.btnShareImage.disabled = true; // Évite les doubles clics
             
             try {
                 const blob = await generateTicketBlob();
-                const file = new File([blob], `Ticket_${currentFlyer.type}_${currentFlyer.number}.jpg`, { type: 'image/jpeg' });
+                // Nom de fichier propre et extension .png
+                const fileName = `Ticket_${currentFlyer.type}_${currentFlyer.number}.png`;
+                const file = new File([blob], fileName, { type: 'image/png' });
 
-                // Vérifie si le navigateur supporte le partage de fichiers (Mobile principalement)
+                // Données à partager
+                const shareData = {
+                    files: [file],
+                    title: 'Ton Ticket - Déjeuner Dansant',
+                    text: `Voici ton ticket pour le Déjeuner Dansant du 8 Février !\nInvité : ${currentFlyer.name}\nTicket N° ${currentFlyer.number}`
+                };
+
+                // Vérification stricte du support
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: 'Ton Ticket - Déjeuner Dansant',
-                        text: `Voici ton ticket pour le Déjeuner Dansant du 8 Février !\nInvité : ${currentFlyer.name}\nTicket N° ${currentFlyer.number}`
-                    });
+                    await navigator.share(shareData);
                 } else {
-                    // Fallback : On télécharge l'image
-                    throw new Error("Partage direct non supporté");
+                    throw new Error("Partage de fichiers non supporté par ce navigateur.");
                 }
             } catch (error) {
-                console.log("Fallback Partage:", error);
-                // Si le partage échoue ou n'est pas dispo, on télécharge
-                handleDownload();
-                // Petit message pour prévenir l'utilisateur
-                if (navigator.userAgent.match(/mobile/i)) {
-                    alert("L'image a été téléchargée. Vous pouvez maintenant l'envoyer manuellement via WhatsApp/SMS.");
-                }
+                console.warn("Échec du partage natif, bascule vers téléchargement :", error);
+                
+                // FALLBACK : Si le partage plante (fréquent sur Android Webview), on télécharge
+                await handleDownload();
+                
+                // Message explicatif pour l'utilisateur
+                // On utilise un petit délai pour que l'alerte ne bloque pas le début du téléchargement
+                setTimeout(() => {
+                    alert("Le partage direct n'a pas fonctionné sur cet appareil.\n\nL'image a été téléchargée dans votre galerie/fichiers.\nVous pouvez maintenant l'envoyer manuellement via WhatsApp.");
+                }, 500);
             } finally {
                 els.shareLoading.classList.add('hidden');
+                els.btnShareImage.disabled = false;
             }
         }
 
         async function handleDownload() {
             if (!currentFlyer) return;
-            els.shareLoading.classList.remove('hidden');
+            // On ne montre pas le loading si appelé depuis handleShare pour éviter le clignotement
+            const showLoader = !els.shareLoading.classList.contains('hidden');
+            if (!showLoader) els.shareLoading.classList.remove('hidden');
 
             try {
                 const blob = await generateTicketBlob();
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `Ticket_${currentFlyer.type}_${currentFlyer.number}.jpg`;
+                link.download = `Ticket_${currentFlyer.type}_${currentFlyer.number}.png`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -748,7 +762,7 @@
                 console.error("Erreur téléchargement:", e);
                 alert("Erreur lors de la génération de l'image.");
             } finally {
-                els.shareLoading.classList.add('hidden');
+                if (!showLoader) els.shareLoading.classList.add('hidden');
             }
         }
 
