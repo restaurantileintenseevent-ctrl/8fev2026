@@ -242,14 +242,16 @@
                         
                         <!-- Partie 1 (Talon) -->
                         <div class="px-2 py-2 flex flex-col items-center justify-center border-r-2 border-dashed border-gray-500 min-w-[80px] max-w-[120px]">
-                            <div class="flyer-name-display text-[10px] text-gray-900 font-bold leading-tight text-center mb-1 line-clamp-2 w-full break-words"></div>
+                            <!-- Correction ici : Suppression de line-clamp-2 pour compatibilité html2canvas -->
+                            <div class="flyer-name-display text-[10px] text-gray-900 font-bold leading-tight text-center mb-1 w-full break-words max-h-[32px] overflow-hidden"></div>
                             <div class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">N°</div>
                             <div class="flyer-number-display text-xl font-mono font-bold text-gray-900 leading-none"></div>
                         </div>
 
                         <!-- Partie 2 (Ticket) -->
                         <div class="px-2 py-2 flex flex-col items-center justify-center min-w-[80px] max-w-[120px]">
-                            <div class="flyer-name-display text-[10px] text-gray-900 font-bold leading-tight text-center mb-1 line-clamp-2 w-full break-words"></div>
+                            <!-- Correction ici : Suppression de line-clamp-2 pour compatibilité html2canvas -->
+                            <div class="flyer-name-display text-[10px] text-gray-900 font-bold leading-tight text-center mb-1 w-full break-words max-h-[32px] overflow-hidden"></div>
                             <div class="text-[8px] text-gray-500 uppercase font-bold tracking-wider">N°</div>
                             <div class="flyer-number-display text-xl font-mono font-bold text-gray-900 leading-none"></div>
                         </div>
