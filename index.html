@@ -237,7 +237,7 @@
                     </div>
                     
                     <!-- Overlay pour lisibilité si image manquante -->
-                    <div class="absolute inset-0 bg-black/10 pointer-events-none"></div>
+                    <div class="absolute inset-0 bg-black/20 pointer-events-none"></div>
 
                     <!-- Ticket Stub (Bottom Right) -->
                     <div class="absolute bottom-6 right-6 bg-white/95 backdrop-blur-sm rounded-lg border-2 border-black/10 shadow-sm print-shadow-none flex overflow-hidden max-w-[260px]">
@@ -277,10 +277,10 @@
         import { getFirestore, doc, setDoc, onSnapshot, runTransaction, collection, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         // =================================================================
-        // ZONE DE CONFIGURATION FIREBASE (ADAPTÉE POUR ENVIRONNEMENT)
+        // ZONE DE CONFIGURATION FIREBASE
         // =================================================================
         
-        // 1. Récupération de la config (Variable d'env ou Hardcodée en fallback)
+        // 1. Récupération de la config
         let firebaseConfig;
         let appId = 'default-app-id';
 
@@ -288,16 +288,16 @@
             firebaseConfig = JSON.parse(__firebase_config);
             if (typeof __app_id !== 'undefined') appId = __app_id;
         } else {
-             // Config originale de l'utilisateur (Fallback)
-            firebaseConfig = {
-                apiKey: "AIzaSyAiSxcRy4Xx15Sv29RpXK_Lit4SmxIJFvY",
-                authDomain: "flyer8fev2026.firebaseapp.com",
-                projectId: "flyer8fev2026",
-                storageBucket: "flyer8fev2026.firebasestorage.app",
-                messagingSenderId: "739708806578",
-                appId: "1:739708806578:web:838c0a91d4f02792dff0ab",
-                measurementId: "G-936B00XV9T"
-            };
+             // Config mise à jour pour event8fev2026
+             firebaseConfig = {
+                apiKey: "AIzaSyAS51ArYhsOLpiVreigrPcREVTFsmBkwB8",
+                authDomain: "event8fev2026.firebaseapp.com",
+                projectId: "event8fev2026",
+                storageBucket: "event8fev2026.firebasestorage.app",
+                messagingSenderId: "105738866270",
+                appId: "1:105738866270:web:b843853de05625f6892ecf",
+                measurementId: "G-GWEGLKYJTQ"
+             };
         }
         
         // =================================================================
@@ -402,7 +402,7 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Pattern d'auth obligatoire pour cet environnement
+                // Pattern d'auth obligatoire
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -431,13 +431,11 @@
         initAuth();
 
         // --- Helpers Path Firestore ---
-        // Adapte le chemin selon si on est en environnement public ou privé
+        // Utilise les chemins corrects pour cet environnement
         function getCollectionPath() {
              return collection(db, 'artifacts', appId, 'public', 'data', COLLECTION_NAME);
         }
         function getCountersPath() {
-             // On stocke les compteurs dans un sous-doc 'counters/global' de la collection
-             // Note: La structure doit être légèrement adaptée pour correspondre aux règles de sécurité
              return doc(db, 'artifacts', appId, 'public', 'data', COLLECTION_NAME + '_counters', 'global');
         }
 
@@ -456,13 +454,10 @@
                     // Initialisation si n'existe pas
                     setDoc(docRef, { adulte: 0, enfant: 0, total: 0 }).catch(e => {
                         console.log("Info: Le doc n'existe pas encore ou permission refusée", e);
-                        // Ne pas bloquer l'UI si on ne peut pas écrire tout de suite
                     });
                 }
             }, (error) => {
                 console.error("Erreur Sync Firestore (Compteurs):", error);
-                // Ne pas passer en mode hors ligne immédiatement pour une erreur de lecture seule, 
-                // mais avertir si nécessaire.
             });
         }
 
@@ -471,7 +466,6 @@
             if (useLocalStorage) return;
 
             const ticketsRef = getCollectionPath();
-            // Note: 'orderBy' simple est autorisé
             const q = query(ticketsRef, orderBy('number', 'desc'));
 
             onSnapshot(q, (snapshot) => {
@@ -673,8 +667,16 @@
             els.numberDisplays.forEach(el => el.textContent = numStr);
             els.flyerTypeText.textContent = flyerData.type;
 
-            // Modification demandée : utilisation des noms de fichiers locaux
-            const bgImage = flyerData.type === 'adulte' ? 'adulte.jpg' : 'enfant.jpg';
+            // --- MODIFICATION POUR PREVIEW (Images Unsplash au lieu de fichiers locaux) ---
+            let bgImage;
+            if (flyerData.type === 'adulte') {
+                // Gold/Elegant theme
+                bgImage = 'https://images.unsplash.com/photo-1514525253440-b393452e8d26?auto=format&fit=crop&q=80&w=350&h=622';
+            } else {
+                // Fun/Colorful theme
+                bgImage = 'https://images.unsplash.com/photo-1502086223501-636b9f09e320?auto=format&fit=crop&q=80&w=350&h=622';
+            }
+            
             els.flyerCanvas.style.backgroundImage = `url('${bgImage}')`;
             
             els.configSection.classList.add('hidden');
@@ -691,14 +693,11 @@
         // --- LOGIQUE DE PARTAGE ET CAPTURE D'ÉCRAN ---
 
         async function generateTicketBlob() {
-            // Utilise html2canvas pour convertir la div en image
-            // On force le scale à 2 pour une bonne qualité sur mobile
             const canvas = await html2canvas(els.flyerCanvas, {
                 useCORS: true,
                 scale: 2,
-                backgroundColor: null // Important pour la transparence/qualité
+                backgroundColor: null
             });
-            // On utilise PNG qui est mieux supporté par le partage Android que JPEG
             return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         }
 
@@ -706,22 +705,19 @@
             if (!currentFlyer) return;
 
             els.shareLoading.classList.remove('hidden');
-            els.btnShareImage.disabled = true; // Évite les doubles clics
+            els.btnShareImage.disabled = true;
             
             try {
                 const blob = await generateTicketBlob();
-                // Nom de fichier propre et extension .png
                 const fileName = `Ticket_${currentFlyer.type}_${currentFlyer.number}.png`;
                 const file = new File([blob], fileName, { type: 'image/png' });
 
-                // Données à partager
                 const shareData = {
                     files: [file],
                     title: 'Ton Ticket - Déjeuner Dansant',
                     text: `Voici ton ticket pour le Déjeuner Dansant du 8 Février !\nInvité : ${currentFlyer.name}\nTicket N° ${currentFlyer.number}`
                 };
 
-                // Vérification stricte du support
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share(shareData);
                 } else {
@@ -729,15 +725,7 @@
                 }
             } catch (error) {
                 console.warn("Échec du partage natif, bascule vers téléchargement :", error);
-                
-                // FALLBACK : Si le partage plante (fréquent sur Android Webview), on télécharge
                 await handleDownload();
-                
-                // Message explicatif pour l'utilisateur
-                // On utilise un petit délai pour que l'alerte ne bloque pas le début du téléchargement
-                setTimeout(() => {
-                    alert("Le partage direct n'a pas fonctionné sur cet appareil.\n\nL'image a été téléchargée dans votre galerie/fichiers.\nVous pouvez maintenant l'envoyer manuellement via WhatsApp.");
-                }, 500);
             } finally {
                 els.shareLoading.classList.add('hidden');
                 els.btnShareImage.disabled = false;
@@ -746,7 +734,6 @@
 
         async function handleDownload() {
             if (!currentFlyer) return;
-            // On ne montre pas le loading si appelé depuis handleShare pour éviter le clignotement
             const showLoader = !els.shareLoading.classList.contains('hidden');
             if (!showLoader) els.shareLoading.classList.remove('hidden');
 
@@ -762,7 +749,8 @@
                 URL.revokeObjectURL(url);
             } catch (e) {
                 console.error("Erreur téléchargement:", e);
-                alert("Erreur lors de la génération de l'image.");
+                // Utilisation d'un message console pour éviter les alertes bloquantes dans l'iframe
+                console.log("Erreur lors de la génération de l'image.");
             } finally {
                 if (!showLoader) els.shareLoading.classList.add('hidden');
             }
